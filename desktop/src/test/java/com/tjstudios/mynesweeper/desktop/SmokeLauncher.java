@@ -22,6 +22,14 @@ public class SmokeLauncher extends Mynesweeper {
     }
     private void tap(Actor a) {
         Stage s=(Stage)read("stage");
+        if(frame==1) {
+            float header=(Float)read("topRectHeight");
+            if(header > Gdx.graphics.getHeight()*.07001f) throw new AssertionError("Header exceeds 7%");
+            Actor tile=s.getActors().get(2);
+            if(Math.abs(tile.getWidth()-tile.getHeight())>.01f) throw new AssertionError("Tiles are not square");
+            if((Float)read("boardBottom") < (Float)read("btmRectHeight")-.01f)
+                throw new AssertionError("Board overlaps controls");
+        }
         Vector2 p=a.localToStageCoordinates(new Vector2(a.getWidth()/2,a.getHeight()/2));
         s.stageToScreenCoordinates(p); s.touchDown((int)p.x,(int)p.y,0,0); s.touchUp((int)p.x,(int)p.y,0,0);
     }
@@ -48,7 +56,9 @@ public class SmokeLauncher extends Mynesweeper {
     }
     public static void main(String[] args) {
         Lwjgl3ApplicationConfiguration c=new Lwjgl3ApplicationConfiguration();
-        c.setTitle("Mynesweeper smoke test"); c.setWindowedMode(400,720); c.disableAudio(true);
+        c.setTitle("Mynesweeper smoke test");
+        c.setWindowedMode(Integer.getInteger("smoke.width",400),Integer.getInteger("smoke.height",720));
+        c.disableAudio(true);
         new Lwjgl3Application(new SmokeLauncher(),c);
     }
 }

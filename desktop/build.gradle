@@ -24,4 +24,6 @@ tasks.register('smokeTest', JavaExec) {
     workingDir = file('../android/assets')
     jvmArgs '--enable-native-access=ALL-UNNAMED'
     systemProperty 'smoke.image', rootProject.file('.validation/game.png').absolutePath
+    systemProperty 'smoke.width', project.findProperty('smokeWidth') ?: '400'
+    systemProperty 'smoke.height', project.findProperty('smokeHeight') ?: '720'
 }

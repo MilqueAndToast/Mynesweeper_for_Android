@@ -19,7 +19,6 @@ import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.utils.ActorGestureListener;
-import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import java.util.ArrayList;
@@ -36,6 +35,7 @@ public class Mynesweeper extends Game {
     private float sqSide;
     private float timer;
     private float btmRectHeight, topRectHeight;
+    private float boardLeft, boardBottom;
     private boolean timerCheck;
     private boolean firstReveal;
     private boolean lossCheck, winCheck;
@@ -102,23 +102,9 @@ public class Mynesweeper extends Game {
     }
 
     private void shapeProcess() {
-        shape.setColor(Color.DARK_GRAY);    // Top-of-screen rectangle
-        shape.begin(ShapeRenderer.ShapeType.Filled);
-        shape.rect(0, btmRectHeight+sqSide*gridHeight, WIN_WIDTH, WIN_HEIGHT-btmRectHeight-sqSide*gridHeight);
-        shape.end();
-
-        shape.begin(ShapeRenderer.ShapeType.Filled);    // Bottom-of-screen rectangle
-        shape.rect(0, 0, WIN_WIDTH, btmRectHeight);
-        shape.end();
-
-        shape.setColor(Color.BLACK);
-        shape.begin(ShapeRenderer.ShapeType.Line);
-        shape.line(WIN_WIDTH/2, btmRectHeight+sqSide*gridHeight, WIN_WIDTH/2, WIN_HEIGHT);
-        shape.end();
-
         shape.setColor(Color.LIGHT_GRAY);
         shape.begin(ShapeRenderer.ShapeType.Filled);
-        shape.rect(0, btmRectHeight, WIN_WIDTH, gridHeight * sqSide);
+        shape.rect(boardLeft, boardBottom, gridWidth * sqSide, gridHeight * sqSide);
         shape.end();
     }
 
@@ -159,7 +145,7 @@ public class Mynesweeper extends Game {
     }
 
     private void setBackground(){
-        Gdx.gl.glClearColor(1, 1, 1, 0);
+        Gdx.gl.glClearColor(0, 0, 0, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
     }
 
@@ -184,9 +170,12 @@ public class Mynesweeper extends Game {
         toggleButtonIndex = 0;
         gridWidth = 8;
         gridHeight = 11;
-        sqSide = Math.min(WIN_WIDTH/8f, WIN_HEIGHT/14f);
-        btmRectHeight = WIN_HEIGHT/8;
-        topRectHeight = WIN_HEIGHT-btmRectHeight-sqSide*gridHeight;
+        topRectHeight = WIN_HEIGHT * .07f;
+        btmRectHeight = WIN_HEIGHT / 8f;
+        sqSide = Math.min(WIN_WIDTH / (float)gridWidth,
+                (WIN_HEIGHT - topRectHeight - btmRectHeight) / gridHeight);
+        boardLeft = (WIN_WIDTH - sqSide * gridWidth) / 2f;
+        boardBottom = WIN_HEIGHT - topRectHeight - sqSide * gridHeight;
         bombCount = 20;
         curFlagCount = 20;
         mineCounter = 20;
@@ -205,11 +194,12 @@ public class Mynesweeper extends Game {
 
     private void initButtonValues() {
         toggleButton = new MyButtonRounded(WIN_WIDTH*(.05f), btmRectHeight/10, WIN_WIDTH*(.9f), btmRectHeight*8/10, 10f);
-        float sqPos = (WIN_WIDTH-WIN_WIDTH*.88f)/8/2;
+        float sqPos = (sqSide - MINE_X_SIZE) / 2f;
 
         for(int i = 0; i < gridHeight; i++) {
             for(int j = 0; j < gridWidth; j++) {
-                mineFieldValues.add(new MineButton(j*(sqSide) + sqPos, i*(sqSide)+btmRectHeight + sqPos, sqSide*.88f, sqSide*.88f, mineStatus[9], j, i, false));
+                mineFieldValues.add(new MineButton(boardLeft + j*sqSide + sqPos,
+                        boardBottom + i*sqSide + sqPos, MINE_X_SIZE, MINE_Y_SIZE, mineStatus[9], j, i, false));
             }
         }
     }
@@ -288,7 +278,7 @@ public class Mynesweeper extends Game {
 
             final TextButton temp = new TextButton("", mineSkin);
             temp.setName("hidden");
-            temp.setPosition((int)mineFieldValues.get(i).getX(), (int)mineFieldValues.get(i).getY());
+            temp.setPosition(mineFieldValues.get(i).getX(), mineFieldValues.get(i).getY());
             temp.setSize(MINE_X_SIZE, MINE_Y_SIZE);
 
             temp.addListener(new InputListener() {
@@ -342,9 +332,10 @@ public class Mynesweeper extends Game {
     private void initFont(){
         FreeTypeFontGenerator fontGen = new FreeTypeFontGenerator(Gdx.files.internal("fonts/digital_7.ttf"));
         FreeTypeFontGenerator.FreeTypeFontParameter param = new FreeTypeFontGenerator.FreeTypeFontParameter();
-        param.size = Math.max(12, WIN_WIDTH/13);
+        // Keep the digits comfortably inside the fixed seven-percent header.
+        param.size = Math.max(1, (int)Math.min(WIN_WIDTH/13f, WIN_HEIGHT*.07f*.45f));
         param.color = Color.RED;
-        param.borderWidth = (int)(3 * Gdx.graphics.getDensity());
+        param.borderWidth = Math.max(1, param.size / 14);
         param.borderColor = Color.BLACK;
         param.minFilter = Texture.TextureFilter.Linear;
         param.magFilter = Texture.TextureFilter.Linear;
