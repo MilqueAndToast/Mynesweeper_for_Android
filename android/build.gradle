@@ -7,8 +7,8 @@ android {
         applicationId = 'com.tjstudios.mynesweeper'
         minSdk = 25
         targetSdk = 36
-        versionCode = 3
-        versionName = '1.1-preview.2'
+        versionCode = 4
+        versionName = '1.1-preview.3'
     }
     sourceSets.main {
         manifest.srcFile 'AndroidManifest.xml'

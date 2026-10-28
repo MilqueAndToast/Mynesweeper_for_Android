@@ -102,6 +102,11 @@ public class Mynesweeper extends Game {
     }
 
     private void shapeProcess() {
+        shape.setColor(Color.DARK_GRAY);
+        shape.begin(ShapeRenderer.ShapeType.Filled);
+        shape.rect(0, WIN_HEIGHT - topRectHeight, WIN_WIDTH, topRectHeight);
+        shape.end();
+
         shape.setColor(Color.LIGHT_GRAY);
         shape.begin(ShapeRenderer.ShapeType.Filled);
         shape.rect(boardLeft, boardBottom, gridWidth * sqSide, gridHeight * sqSide);
@@ -175,7 +180,8 @@ public class Mynesweeper extends Game {
         sqSide = Math.min(WIN_WIDTH / (float)gridWidth,
                 (WIN_HEIGHT - topRectHeight - btmRectHeight) / gridHeight);
         boardLeft = (WIN_WIDTH - sqSide * gridWidth) / 2f;
-        boardBottom = WIN_HEIGHT - topRectHeight - sqSide * gridHeight;
+        boardBottom = btmRectHeight
+                + (WIN_HEIGHT - topRectHeight - btmRectHeight - sqSide * gridHeight) / 2f;
         bombCount = 20;
         curFlagCount = 20;
         mineCounter = 20;

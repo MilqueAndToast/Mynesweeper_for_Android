@@ -29,6 +29,10 @@ public class SmokeLauncher extends Mynesweeper {
             if(Math.abs(tile.getWidth()-tile.getHeight())>.01f) throw new AssertionError("Tiles are not square");
             if((Float)read("boardBottom") < (Float)read("btmRectHeight")-.01f)
                 throw new AssertionError("Board overlaps controls");
+            float lowerGap=(Float)read("boardBottom")-(Float)read("btmRectHeight");
+            float upperGap=Gdx.graphics.getHeight()-header-(Float)read("boardBottom")
+                    -(Float)read("sqSide")*11;
+            if(Math.abs(upperGap-lowerGap)>.01f) throw new AssertionError("Board is not vertically centered");
         }
         Vector2 p=a.localToStageCoordinates(new Vector2(a.getWidth()/2,a.getHeight()/2));
         s.stageToScreenCoordinates(p); s.touchDown((int)p.x,(int)p.y,0,0); s.touchUp((int)p.x,(int)p.y,0,0);

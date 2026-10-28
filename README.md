@@ -2,8 +2,9 @@
 
 The original Java/libGDX Android Minesweeper game, restored with its gray board,
 yellow controls, digital counters, and 8-by-11 layout with 20 mines.
-The counters occupy at most 7% of screen height. Tiles stay square, with unused
-space rendered black.
+The gray counter strip occupies at most 7% of screen height. Tiles stay square,
+and the board is centered vertically between the header and bottom controls,
+with unused space rendered black.
 
 ## Play
 
