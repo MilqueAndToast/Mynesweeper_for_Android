@@ -1,39 +1,27 @@
-sourceCompatibility = 1.7
-sourceSets.main.java.srcDirs = [ "src/" ]
-sourceSets.main.resources.srcDirs = ["../android/assets"]
-
-project.ext.mainClassName = "com.tjstudios.mynesweeper.desktop.DesktopLauncher"
-project.ext.assetsDir = new File("../android/assets")
-
-task run(dependsOn: classes, type: JavaExec) {
-    main = project.mainClassName
-    classpath = sourceSets.main.runtimeClasspath
-    standardInput = System.in
-    workingDir = project.assetsDir
-    ignoreExitValue = true
+plugins { id 'application' }
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
 }
-
-task debug(dependsOn: classes, type: JavaExec) {
-    main = project.mainClassName
-    classpath = sourceSets.main.runtimeClasspath
-    standardInput = System.in
-    workingDir = project.assetsDir
-    ignoreExitValue = true
-    debug = true
+sourceSets.main.java.srcDirs = ['src/']
+sourceSets.main.java.exclude 'test/**'
+sourceSets.main.resources.srcDirs = ['../android/assets']
+application {
+    mainClass = 'com.tjstudios.mynesweeper.desktop.DesktopLauncher'
+    applicationDefaultJvmArgs = ['--enable-native-access=ALL-UNNAMED']
 }
-
-task dist(type: Jar) {
-    manifest {
-        attributes 'Main-Class': project.mainClassName
-    }
-    dependsOn configurations.runtimeClasspath
-    from {
-        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
-    }
-    with jar
+dependencies {
+    implementation project(':core')
+    implementation "com.badlogicgames.gdx:gdx-backend-lwjgl3:$gdxVersion"
+    runtimeOnly "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop"
+    runtimeOnly "com.badlogicgames.gdx:gdx-freetype-platform:$gdxVersion:natives-desktop"
 }
-
-
-dist.dependsOn classes
-
-eclipse.project.name = appName + "-desktop"
+tasks.named('run') { workingDir = file('../android/assets') }
+tasks.register('smokeTest', JavaExec) {
+    dependsOn testClasses
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.tjstudios.mynesweeper.desktop.SmokeLauncher'
+    workingDir = file('../android/assets')
+    jvmArgs '--enable-native-access=ALL-UNNAMED'
+    systemProperty 'smoke.image', rootProject.file('.validation/game.png').absolutePath
+}

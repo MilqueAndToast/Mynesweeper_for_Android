@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-          xmlns:tools="http://schemas.android.com/tools" package="com.tjstudios.mynesweeper" >
+          xmlns:tools="http://schemas.android.com/tools" >
 
     <application
             android:allowBackup="true"
@@ -9,7 +9,7 @@
             android:appCategory="game"
             android:label="@string/app_name"
             android:theme="@style/GdxTheme" tools:targetApi="o">
-        <activity
+        <activity android:exported="true"
             android:name="com.tjstudios.mynesweeper.AndroidLauncher"
             android:label="@string/app_name" 
             android:screenOrientation="portrait"

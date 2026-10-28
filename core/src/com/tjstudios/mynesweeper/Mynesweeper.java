@@ -21,6 +21,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.utils.ActorGestureListener;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
+import com.badlogic.gdx.utils.viewport.FitViewport;
 import java.util.ArrayList;
 
 public class Mynesweeper extends Game {
@@ -36,6 +37,7 @@ public class Mynesweeper extends Game {
     private float timer;
     private float btmRectHeight, topRectHeight;
     private boolean timerCheck;
+    private boolean firstReveal;
     private boolean lossCheck, winCheck;
     private String[] mineStatus, toggleButtonText;
     private ShapeRenderer shape;
@@ -45,7 +47,7 @@ public class Mynesweeper extends Game {
 	private Texture img;
     private BitmapFont clockFont, ubuntuFont;
     private Stage stage;
-    private Skin toggleSkin;
+    private Skin toggleSkin, mineSkin;
     private GlyphLayout timerLayout, bombLayout;
     private MyButton toggleButton;
     private Color toggleButtonColor, toggleButtonShaded, toggleButtonClicked;
@@ -71,16 +73,14 @@ public class Mynesweeper extends Game {
 	public void render() {
         super.render();
 
-        if(endDelay < 3) {
-            if(lossCheck || winCheck) { endDelay++; }
-            cameraSetup();
-            bombText();
-            incrementTimer();
-            shapeProcess();
-            batchProcess();
-            stageProcess();
-            gridProcess();
-        }
+        setBackground();
+        cameraSetup();
+        incrementTimer();
+        gridProcess();
+        bombText();
+        shapeProcess();
+        batchProcess();
+        stageProcess();
 	}
 	
 	@Override
@@ -89,12 +89,15 @@ public class Mynesweeper extends Game {
 		img.dispose();
         toggleSkin.dispose();
         stage.dispose();
+        mineSkin.dispose();
+        clockFont.dispose();
+        shape.dispose();
 	}
 
 	private void batchProcess() {
         batch.begin();
-            clockFont.draw(batch, bombLayout, -WIN_WIDTH/4 - bombLayout.width/2, (WIN_HEIGHT-topRectHeight+bombLayout.height)/2);
-            clockFont.draw(batch, timerLayout, WIN_WIDTH/4 - timerLayout.width/2, (WIN_HEIGHT-topRectHeight+timerLayout.height)/2);
+            clockFont.draw(batch, bombLayout, WIN_WIDTH/4 - bombLayout.width/2, WIN_HEIGHT-topRectHeight/2+bombLayout.height/2);
+            clockFont.draw(batch, timerLayout, WIN_WIDTH*3/4 - timerLayout.width/2, WIN_HEIGHT-topRectHeight/2+timerLayout.height/2);
         batch.end();
     }
 
@@ -144,7 +147,7 @@ public class Mynesweeper extends Game {
 
     @Override
     public void resize(int width, int height) {
-        viewport.update(width, height);
+        viewport.update(width, height, true);
     }
 
     @Override
@@ -162,15 +165,18 @@ public class Mynesweeper extends Game {
 
     private void initVars(){
         lossCheck = false;
+        winCheck = false;
+        firstReveal = true;
         endDelay = 0;
         camera = new OrthographicCamera(WIN_WIDTH, WIN_HEIGHT);
-        viewport = new ScreenViewport(camera);
+        viewport = new FitViewport(WIN_WIDTH, WIN_HEIGHT, camera);
+        viewport.update(Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), true);
         shape = new ShapeRenderer();
-        stage = new Stage();
+        stage = new Stage(viewport);
         batch = new SpriteBatch();
         img = new Texture("minesweep.png");
         mineStatus = new String[]{" ", "1", "2", "3", "4", "5", "6", "7", "8", "BOMB"};             // 0 is blank, 9 is bomb and 1-8 are adjacent bomb counts
-        toggleButtonText = new String[]{"BOMB", "FLAG"};
+        toggleButtonText = new String[]{"REVEAL", "FLAG"};
         timerLayout = new GlyphLayout();
         bombLayout = new GlyphLayout();
         mineField.clear();
@@ -178,7 +184,7 @@ public class Mynesweeper extends Game {
         toggleButtonIndex = 0;
         gridWidth = 8;
         gridHeight = 11;
-        sqSide = WIN_WIDTH/8;
+        sqSide = Math.min(WIN_WIDTH/8f, WIN_HEIGHT/14f);
         btmRectHeight = WIN_HEIGHT/8;
         topRectHeight = WIN_HEIGHT-btmRectHeight-sqSide*gridHeight;
         bombCount = 20;
@@ -213,6 +219,7 @@ public class Mynesweeper extends Game {
         Pixmap toggleButtonPixmap = new Pixmap((int)toggleButton.getXSize(), (int)toggleButton.getYSize(), Pixmap.Format.RGBA8888);
         roundedRect(toggleButtonPixmap, toggleButtonColor, 0, 0, (int)toggleButton.getXSize(), (int)toggleButton.getYSize(), (int)(((MyButtonRounded)toggleButton).getRadius()*Gdx.graphics.getDensity()));
         toggleSkin.add("yellow", new Texture(toggleButtonPixmap));
+        toggleButtonPixmap.dispose();
         toggleSkin.add("default", ubuntuFont);
 
         TextButton.TextButtonStyle toggleStyle = new TextButton.TextButtonStyle();
@@ -224,6 +231,7 @@ public class Mynesweeper extends Game {
 
         final TextButton tB = new TextButton(toggleButtonText[toggleButtonIndex], toggleSkin);
         tB.setPosition(toggleButton.getX(), toggleButton.getY());
+        tB.setSize(WIN_WIDTH*.58f, toggleButton.getYSize());
         tB.addListener(new InputListener() {
             @Override
             public boolean touchDown (InputEvent event, float x, float y, int pointer, int button) {
@@ -239,52 +247,62 @@ public class Mynesweeper extends Game {
         tB.addListener(new ActorGestureListener() {
             @Override
             public boolean longPress(Actor actor, float x, float y) {
-                initVars();
-                initFont();
-                initButtonValues();
-                initButtons();
-                initGrid();
+                Gdx.app.postRunnable(new Runnable() {
+                    public void run() { restart(); }
+                });
 
                 return true;
             }
         });
 
         stage.addActor(tB);
+        TextButton newGame = new TextButton("NEW", toggleSkin);
+        newGame.setBounds(WIN_WIDTH*.66f, toggleButton.getY(), WIN_WIDTH*.29f, toggleButton.getYSize());
+        newGame.addListener(new com.badlogic.gdx.scenes.scene2d.utils.ClickListener() {
+            @Override public void clicked(InputEvent event, float x, float y) {
+                Gdx.app.postRunnable(new Runnable() {
+                    public void run() { restart(); }
+                });
+            }
+        });
+        stage.addActor(newGame);
 
         /*------------------------------------------------------------------------------------------------------------------------------------*/
 
-        final Skin mineSkin = new Skin();
+        mineSkin = new Skin();
         Pixmap minePix = new Pixmap((int)MINE_X_SIZE, (int)MINE_Y_SIZE, Pixmap.Format.RGBA8888);
         TextButton.TextButtonStyle mineStyle;
 
+        minePix.setColor(Color.WHITE);
+        minePix.fill();
+        mineSkin.add("gray", new Texture(minePix));
+        mineSkin.add("white", new Texture(minePix));
+        mineSkin.add("red", new Texture(minePix));
         for(int i = 0; i < mineFieldValues.size(); i++) {
-            minePix.setColor(mineColor);
-            minePix.fillRectangle(0, 0, (int)MINE_X_SIZE, (int)MINE_Y_SIZE);
-            mineSkin.add("gray", new Texture(minePix));
-            minePix.setColor(Color.WHITE);
-            mineSkin.add("white", new Texture(minePix));
-            minePix.setColor(Color.RED);
-            mineSkin.add("red", new Texture(minePix));
-            mineSkin.add("default", ubuntuFont);
-
             mineStyle = new TextButton.TextButtonStyle();
             mineStyle.up = mineSkin.newDrawable("gray", mineColor);
             mineStyle.down = mineSkin.newDrawable("gray", mineColorShaded);
-            mineStyle.font = mineSkin.getFont("default");
+            mineStyle.font = ubuntuFont;
 
             mineSkin.add("default", mineStyle);
 
             final TextButton temp = new TextButton("", mineSkin);
             temp.setName("hidden");
             temp.setPosition((int)mineFieldValues.get(i).getX(), (int)mineFieldValues.get(i).getY());
+            temp.setSize(MINE_X_SIZE, MINE_Y_SIZE);
 
             temp.addListener(new InputListener() {
                 @Override
                 public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
+                    if(lossCheck || winCheck) { return true; }
                     if(!timerCheck) { timerCheck = true; }
 
                     if(temp.getName().equals("hidden") || temp.getName().equals("flagged") || temp.getName().equals("flag")) {
                         if(toggleButtonIndex == 0 && temp.getName().equals("hidden")) {   // if ToggleButton's text is "BOMB"
+                            if(firstReveal) {
+                                makeFirstRevealSafe(mineField.indexOf(temp));
+                                firstReveal = false;
+                            }
                             temp.setName("revealed");
                             numRevealed++;
                             temp.getStyle().up = mineSkin.newDrawable("white", Color.WHITE);
@@ -293,12 +311,14 @@ public class Mynesweeper extends Game {
                         else if(toggleButtonIndex != 0) {  // if ToggleButton's text is "FLAG"
                             if(temp.getName().equals("flagged") || temp.getName().equals("flag")) {
                                 temp.setName("unflagged");
+                                temp.setText("");
                                 curFlagCount++;
                                 temp.getStyle().up = mineSkin.newDrawable("gray", mineColor);
                                 temp.getStyle().down = mineSkin.newDrawable("gray", mineColorShaded);
                             }
                             else {
                                 temp.setName("flagged");
+                                temp.setText("F");
                                 curFlagCount--;
                                 temp.getStyle().up = mineSkin.newDrawable("red", Color.FIREBRICK);
                                 temp.getStyle().down = mineSkin.newDrawable("red", Color.FIREBRICK);
@@ -322,7 +342,7 @@ public class Mynesweeper extends Game {
     private void initFont(){
         FreeTypeFontGenerator fontGen = new FreeTypeFontGenerator(Gdx.files.internal("fonts/digital_7.ttf"));
         FreeTypeFontGenerator.FreeTypeFontParameter param = new FreeTypeFontGenerator.FreeTypeFontParameter();
-        param.size = (int)(42 * Gdx.graphics.getDensity());
+        param.size = Math.max(12, WIN_WIDTH/13);
         param.color = Color.RED;
         param.borderWidth = (int)(3 * Gdx.graphics.getDensity());
         param.borderColor = Color.BLACK;
@@ -330,13 +350,15 @@ public class Mynesweeper extends Game {
         param.magFilter = Texture.TextureFilter.Linear;
         clockFont = fontGen.generateFont(param);
 
+        fontGen.dispose();
         fontGen = new FreeTypeFontGenerator(Gdx.files.internal("fonts/ubuntu_bold.ttf"));
         param = new FreeTypeFontGenerator.FreeTypeFontParameter();
-        param.size = (int)(36 * Gdx.graphics.getDensity());
+        param.size = Math.max(12, WIN_WIDTH/16);
         param.color = Color.BLACK;
         param.minFilter = Texture.TextureFilter.Linear;
         param.magFilter = Texture.TextureFilter.Linear;
         ubuntuFont = fontGen.generateFont(param);
+        fontGen.dispose();
     }
 
     private void initGrid() {
@@ -385,19 +407,44 @@ public class Mynesweeper extends Game {
         return value;
     }
 
-    private void emptySpaceCheck(int x, int y) {
-
-        emptySpaceCheckRec(x, y);
+    private void makeFirstRevealSafe(int index) {
+        int x = index % gridWidth, y = index / gridWidth;
+        if(mineVals[x][y] != 9) { return; }
+        outer: for(int row = 0; row < gridHeight; row++) {
+            for(int col = 0; col < gridWidth; col++) {
+                if(mineVals[col][row] != 9) {
+                    mineVals[col][row] = 9;
+                    mineVals[x][y] = 0;
+                    break outer;
+                }
+            }
+        }
+        for(int row = 0; row < gridHeight; row++) {
+            for(int col = 0; col < gridWidth; col++) {
+                if(mineVals[col][row] != 9) { mineVals[col][row] = bombCheck(col, row); }
+            }
+        }
     }
 
-    private void emptySpaceCheckRec(int x, int y) {
-
-        mineField.get(y * gridWidth + x).setName("cluster " + clusterNum);
-
-        if(x > 0) { emptySpaceCheckRec(x-1, y); }
-        if(x > gridWidth) { emptySpaceCheckRec(x+1, y); }
-        if(y > 0) { emptySpaceCheckRec(x, y-1); }
-        if(y > gridHeight) { emptySpaceCheckRec(x, y+1); }
+    private void emptySpaceCheck(int x, int y) {
+        ArrayList<Integer> pending = new ArrayList<Integer>();
+        pending.add(y * gridWidth + x);
+        for(int next = 0; next < pending.size(); next++) {
+            int index = pending.get(next), cx = index % gridWidth, cy = index / gridWidth;
+            for(int row = Math.max(0, cy-1); row <= Math.min(gridHeight-1, cy+1); row++) {
+                for(int col = Math.max(0, cx-1); col <= Math.min(gridWidth-1, cx+1); col++) {
+                    TextButton tile = mineField.get(row * gridWidth + col);
+                    if(!tile.getName().equals("hidden") || mineVals[col][row] == 9) { continue; }
+                    int value = mineVals[col][row];
+                    tile.setName(value == 0 ? "empty" : "value");
+                    tile.setText(value == 0 ? " " : String.valueOf(value));
+                    tile.getStyle().up = mineSkin.newDrawable("white", Color.WHITE);
+                    tile.getStyle().down = mineSkin.newDrawable("white", Color.WHITE);
+                    numRevealed++;
+                    if(value == 0) { pending.add(row * gridWidth + col); }
+                }
+            }
+        }
     }
 
     private void gridProcess() {
@@ -412,6 +459,7 @@ public class Mynesweeper extends Game {
                     if(mineVals[j][i] == 0) {
                         revealString = " ";
                         revealName = "empty";
+                        emptySpaceCheck(j, i);
                     }
                     else if ((mineVals[j][i] == 9)){
                         revealString = "B";
@@ -443,7 +491,7 @@ public class Mynesweeper extends Game {
                     temp.setName("hidden");
                 }
 
-                if((mineCounter <= 0) && (numRevealed == (gridWidth*gridHeight-bombCount))) {
+                if(!lossCheck && numRevealed == (gridWidth*gridHeight-bombCount)) {
                     winCheck = true;
                 }
             }
@@ -466,8 +514,20 @@ public class Mynesweeper extends Game {
     }
 
     private void cameraSetup() {
+        viewport.apply();
         camera.update();
         batch.setProjectionMatrix(camera.combined);
+        shape.setProjectionMatrix(camera.combined);
+    }
+
+    private void restart() {
+        dispose();
+        initFont();
+        initVars();
+        initButtonValues();
+        initButtons();
+        initGrid();
+        Gdx.input.setInputProcessor(stage);
     }
 
     private void storeWindowAndPosition(){
@@ -476,14 +536,14 @@ public class Mynesweeper extends Game {
     }
 
     private void incrementTimer(){
-        if(timerCheck && timer < 1000) {
+        if(timerCheck && !lossCheck && !winCheck && timer < 1000) {
             float deltaTime = Gdx.graphics.getDeltaTime();
             timer += deltaTime;
             secTimer = (int)timer;
         }
     }
 
-    private class MyButton extends Mynesweeper {
+    private static class MyButton {
         private float xPos, yPos, xSize, ySize;
         private String text;
 

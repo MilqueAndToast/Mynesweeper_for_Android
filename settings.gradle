@@ -1,1 +1,4 @@
-include 'desktop', 'android', 'core'
+rootProject.name = 'Mynesweeper'
+include 'core', 'desktop'
+// Desktop development does not require an Android SDK.
+if (gradle.startParameter.projectProperties.containsKey('android')) { include 'android' }
