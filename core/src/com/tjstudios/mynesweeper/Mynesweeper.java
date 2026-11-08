@@ -19,11 +19,15 @@ import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.utils.ActorGestureListener;
+import com.badlogic.gdx.utils.TimeUtils;
+import com.badlogic.gdx.utils.Timer;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import java.util.ArrayList;
 
 public class Mynesweeper extends Game {
+    private static final long NANOS_PER_SECOND = 1_000_000_000L;
+    private static final int MAX_TIMER_SECONDS = 1000;
     private int endDelay;
     private int gridWidth, gridHeight;
     private int WIN_WIDTH, WIN_HEIGHT;
@@ -33,7 +37,9 @@ public class Mynesweeper extends Game {
     private int[][] mineVals;
     private float MINE_X_SIZE, MINE_Y_SIZE;
     private float sqSide;
-    private float timer;
+    private long elapsedNanos;
+    private long timerStartedAt;
+    private Timer.Task timerTick;
     private float btmRectHeight, topRectHeight;
     private float boardLeft, boardBottom;
     private boolean timerCheck;
@@ -66,6 +72,8 @@ public class Mynesweeper extends Game {
         setBackground();    // Sets background color
 
         Gdx.input.setInputProcessor(stage);
+        Gdx.graphics.setContinuousRendering(false);
+        Gdx.graphics.requestRendering();
 //        stage.setDebugAll(true);
 	}
 
@@ -75,8 +83,8 @@ public class Mynesweeper extends Game {
 
         setBackground();
         cameraSetup();
-        incrementTimer();
         gridProcess();
+        updateTimer();
         bombText();
         shapeProcess();
         batchProcess();
@@ -85,6 +93,7 @@ public class Mynesweeper extends Game {
 	
 	@Override
 	public void dispose() {
+        pauseTimer();
 		batch.dispose();
 		img.dispose();
         toggleSkin.dispose();
@@ -139,14 +148,18 @@ public class Mynesweeper extends Game {
     @Override
     public void resize(int width, int height) {
         viewport.update(width, height, true);
+        Gdx.graphics.requestRendering();
     }
 
     @Override
     public void pause() {
+        pauseTimer();
     }
 
     @Override
     public void resume() {
+        resumeTimer();
+        Gdx.graphics.requestRendering();
     }
 
     private void setBackground(){
@@ -187,7 +200,7 @@ public class Mynesweeper extends Game {
         mineCounter = 20;
         numRevealed = 0;
         secTimer = 0;
-        timer = 0f;
+        elapsedNanos = 0;
         timerCheck = false;
         clusterNum = 0;
         MINE_X_SIZE = MINE_Y_SIZE = sqSide*.88f;
@@ -233,6 +246,7 @@ public class Mynesweeper extends Game {
             public boolean touchDown (InputEvent event, float x, float y, int pointer, int button) {
                 toggleButtonIndex = Math.abs(toggleButtonIndex - 1);
                 tB.setText(toggleButtonText[toggleButtonIndex]);
+                Gdx.graphics.requestRendering();
 
                 return true;
             }
@@ -291,7 +305,10 @@ public class Mynesweeper extends Game {
                 @Override
                 public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
                     if(lossCheck || winCheck) { return true; }
-                    if(!timerCheck) { timerCheck = true; }
+                    if(!timerCheck) {
+                        timerCheck = true;
+                        resumeTimer();
+                    }
 
                     if(temp.getName().equals("hidden") || temp.getName().equals("flagged") || temp.getName().equals("flag")) {
                         if(toggleButtonIndex == 0 && temp.getName().equals("hidden")) {   // if ToggleButton's text is "BOMB"
@@ -303,6 +320,7 @@ public class Mynesweeper extends Game {
                             numRevealed++;
                             temp.getStyle().up = mineSkin.newDrawable("white", Color.WHITE);
                             temp.getStyle().down = mineSkin.newDrawable("white", Color.WHITE);
+                            Gdx.graphics.requestRendering();
                         }
                         else if(toggleButtonIndex != 0) {  // if ToggleButton's text is "FLAG"
                             if(temp.getName().equals("flagged") || temp.getName().equals("flag")) {
@@ -319,6 +337,7 @@ public class Mynesweeper extends Game {
                                 temp.getStyle().up = mineSkin.newDrawable("red", Color.FIREBRICK);
                                 temp.getStyle().down = mineSkin.newDrawable("red", Color.FIREBRICK);
                             }
+                            Gdx.graphics.requestRendering();
                         }
                     }
 
@@ -525,6 +544,7 @@ public class Mynesweeper extends Game {
         initButtons();
         initGrid();
         Gdx.input.setInputProcessor(stage);
+        Gdx.graphics.requestRendering();
     }
 
     private void storeWindowAndPosition(){
@@ -532,11 +552,48 @@ public class Mynesweeper extends Game {
         WIN_WIDTH = Gdx.graphics.getWidth();
     }
 
-    private void incrementTimer(){
-        if(timerCheck && !lossCheck && !winCheck && timer < 1000) {
-            float deltaTime = Gdx.graphics.getDeltaTime();
-            timer += deltaTime;
-            secTimer = (int)timer;
+    private void resumeTimer() {
+        if (!timerCheck || timerTick != null || lossCheck || winCheck || secTimer >= MAX_TIMER_SECONDS) {
+            return;
+        }
+        timerStartedAt = TimeUtils.nanoTime();
+        timerTick = new Timer.Task() {
+            @Override public void run() {
+                if (timerTick != this) return;
+                long elapsed = runningElapsedNanos();
+                if (elapsed / NANOS_PER_SECOND < MAX_TIMER_SECONDS) {
+                    scheduleTimerTick(elapsed);
+                }
+                Gdx.graphics.requestRendering();
+            }
+        };
+        scheduleTimerTick(elapsedNanos);
+    }
+
+    private long runningElapsedNanos() {
+        return elapsedNanos + TimeUtils.timeSinceNanos(timerStartedAt);
+    }
+
+    private void scheduleTimerTick(long elapsed) {
+        // Schedule the next displayed second, even if the last callback ran late.
+        long nanosUntilTick = NANOS_PER_SECOND - elapsed % NANOS_PER_SECOND;
+        long millisUntilTick = (nanosUntilTick + 999_999L) / 1_000_000L;
+        Timer.schedule(timerTick, millisUntilTick / 1000f);
+    }
+
+    private void pauseTimer() {
+        if (timerTick == null) return;
+        elapsedNanos = runningElapsedNanos();
+        secTimer = (int)Math.min(MAX_TIMER_SECONDS, elapsedNanos / NANOS_PER_SECOND);
+        timerTick.cancel();
+        timerTick = null;
+    }
+
+    private void updateTimer() {
+        if (timerTick == null) return;
+        secTimer = (int)Math.min(MAX_TIMER_SECONDS, runningElapsedNanos() / NANOS_PER_SECOND);
+        if (lossCheck || winCheck || secTimer >= MAX_TIMER_SECONDS) {
+            pauseTimer();
         }
     }
 
