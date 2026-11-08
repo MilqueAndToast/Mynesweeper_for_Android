@@ -2,7 +2,7 @@ buildscript {
     repositories { google(); mavenCentral() }
     dependencies {
         if (gradle.startParameter.projectProperties.containsKey('android')) {
-            classpath 'com.android.tools.build:gradle:9.0.1'
+            classpath 'com.android.tools.build:gradle:9.5.1'
         }
     }
 }

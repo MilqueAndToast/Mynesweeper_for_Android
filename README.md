@@ -37,7 +37,7 @@ and writes `.validation/game.png` from the actual renderer.
 
 ## Android
 
-Install Android SDK Platform 36 and Build Tools 36.0.0. Set `sdk.dir` in a local
+Install Android SDK Platform 37.2 and Build Tools 37.0.0. Set `sdk.dir` in a local
 `local.properties` file, or set `ANDROID_HOME`. Enable the Android module with
 `-Pandroid` (also set this Gradle project property when importing Android Studio).
 
@@ -46,7 +46,8 @@ Install Android SDK Platform 36 and Build Tools 36.0.0. Set `sdk.dir` in a local
 ```
 
 The test APK is `android/build/outputs/apk/debug/android-debug.apk`.
-It supports Android 7.1+ and is signed with a development key, not a release key.
+It supports Android 12 and later (API 31+), targets Android 17 (API 37), and is
+signed with a development key.
 The restored application ID is `com.tjstudios.mynesweeper`.
 
 Release signing, store submission, and verification on a physical Android device
@@ -60,5 +61,6 @@ are separate from the desktop checks. There is no iOS launcher in this repositor
   and kept the end state rendering so restart remains usable.
 - Fixed tile sizing and viewport projection, added an explicit New Game control,
   and removed repeated texture/font leaks.
-- Updated to libGDX 1.14.2, LWJGL3, Gradle 9.1, and Android Gradle Plugin 9.0.1.
+- Modernized the build with libGDX 1.14.2, LWJGL 3.4.3, Gradle 9.9.0, and
+  Android Gradle Plugin 9.5.1.
 - Added gameplay regression tests and a graphics integration test.

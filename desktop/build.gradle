@@ -13,8 +13,12 @@ application {
 dependencies {
     implementation project(':core')
     implementation "com.badlogicgames.gdx:gdx-backend-lwjgl3:$gdxVersion"
+    implementation platform('org.lwjgl:lwjgl-bom:3.4.3')
     runtimeOnly "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop"
     runtimeOnly "com.badlogicgames.gdx:gdx-freetype-platform:$gdxVersion:natives-desktop"
+    constraints {
+        runtimeOnly 'com.badlogicgames.jlayer:jlayer:1.0.2-gdx'
+    }
 }
 tasks.named('run') { workingDir = file('../android/assets') }
 tasks.register('smokeTest', JavaExec) {
